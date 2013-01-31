@@ -71,7 +71,6 @@ passport.use('slc', new OAuth2Strategy({
   }
 ));
 
-
 // thanks slc sdk...
 function requireToken() {
   return function(req, res, next) {
