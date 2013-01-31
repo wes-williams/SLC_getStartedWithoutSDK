@@ -1,0 +1,18 @@
+extends navigation
+
+block content
+  div.main.container
+    table.table.table-striped
+      thead
+        th Institution Name
+        th State
+        th City
+      tbody
+        - each school in schools
+          tr
+            td
+              = school.nameOfInstitution
+            td
+              = school.address[0].stateAbbreviation
+            td
+              = school.address[0].city

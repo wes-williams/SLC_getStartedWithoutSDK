@@ -1,0 +1,18 @@
+extends navigation
+
+block content
+  div.main.container
+    table.table.table-striped 
+      thead
+        th First Name
+        th Middle Name
+        th Last Name 
+      tbody
+        - each student in students 
+          tr
+            td
+              = student.name.firstName 
+            td
+              = student.name.middleName
+            td
+              = student.name.lastSurname
