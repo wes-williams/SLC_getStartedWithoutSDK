@@ -1,7 +1,7 @@
 SLC_getStartedWithoutSDK
 ============================
 
-SLC Example App using common node modules
+Example SLC app using common node modules
 
 Get Started
 ------------
