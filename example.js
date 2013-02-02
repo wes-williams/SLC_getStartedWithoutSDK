@@ -1,11 +1,22 @@
+///////////////////////////////////////////
+// MODULE IMPORTS
+///////////////////////////////////////////
+
 var express = require('express');
 var passport = require('passport')
 var OAuth2Strategy = require('passport-oauth').OAuth2Strategy;
 var request = require('request');
+// local module
+var appConfig = require('./appConfig');
 
-var handleRequest = function(user, options, callback) {
+///////////////////////////////////////////
+//  COMMON FUNCTIONS
+///////////////////////////////////////////
+
+// simplified request handling
+function handleRequest(user, options, callback) {
   request({ 
-        'uri' : 'https://api.sandbox.slcedu.org/api/rest/v1' + options.uri,
+        'uri' : appConfig.requestUrl + options.uri,
         'body' : options.body,
         'method' : options.method,
         'headers' :  { 'Authorization': 'Bearer ' + user.accessToken, 
@@ -25,52 +36,7 @@ var handleRequest = function(user, options, callback) {
   });
 };
 
-/////////////////////////////////
-// Start Persistent Session Code
-// Note : Use a real store
-/////////////////////////////////
-var users = [];
-var findUser = function(request) { return users[request.session.passport.user]; };
-
-passport.serializeUser(function(user, done) {
-  users[user.user_id] = user;
-  done(null, user.user_id);
-});
-
-passport.deserializeUser(function(id, done) {
-  var user = users[id];
-  done(null, user);
-});
-/////////////////////////////////
-// End Persistent Session Code
-/////////////////////////////////
-
-passport.use('slc', new OAuth2Strategy({
-    authorizationURL: 'https://api.sandbox.slcedu.org/api/oauth/authorize',
-    tokenURL: 'https://api.sandbox.slcedu.org/api/oauth/token?grant_type=authorization_code',
-    clientID: 'asdF34gsd',
-    clientSecret: 'T46S1sdfkjdfgui4Ffg3gedfqdfORg2d436',
-    callbackURL: 'http://127.0.0.1:3000/auth/slc/callback'
-  },
-  function(accessToken, refreshToken, profile, done) {
-
-    var fakeUser = { 'accessToken' : accessToken }; 
-    var options =  { 'method' : 'GET', 
-                     'uri' : '/system/session/check' };
-
-    var callback = function(user, data) {
-      var fullUser = null;
-      if(data  && data.user_id) { 
-        fullUser = data;
-        fullUser.accessToken = user.accessToken;
-      } 
-      done(null, fullUser);
-    };
-
-    handleRequest(fakeUser,options,callback);  
-  }
-));
-
+// require token for session enabled request
 // thanks slc sdk...
 function requireToken() {
   return function(req, res, next) {
@@ -84,29 +50,94 @@ function requireToken() {
    }
 }
 
-var app = express();
+///////////////////////////////////////////
+// PERSISTENT SESSION SETUP 
+// Note : Use a real store
+///////////////////////////////////////////
 
+var users = [];
+
+// retrieve user for request
+function findUser(request) { 
+  return users[request.session.passport.user]; 
+};
+
+// store user in persistent storage for passport
+passport.serializeUser(function(user, done) {
+  users[user.user_id] = user;
+  done(null, user.user_id);
+});
+
+// retrieve user from persistent store for passport 
+passport.deserializeUser(function(id, done) {
+  var user = users[id];
+  done(null, user);
+});
+
+///////////////////////////////////////////
+// APP AND MODULE CONFIG 
+///////////////////////////////////////////
+
+// setup oauth through passport
+passport.use('slc', new OAuth2Strategy({
+    authorizationURL: appConfig.oauth.authorizationUrl,
+    tokenURL: appConfig.oauth.tokenUrl,
+    clientID: appConfig.oauth.clientId,
+    clientSecret: appConfig.oauth.clientSecret,
+    callbackURL: appConfig.oauth.callbackUrl 
+  },
+  function(accessToken, refreshToken, profile, done) {
+    var fakeUser = { 'accessToken' : accessToken }; 
+    var options =  { 'method' : 'GET', 
+                     'uri' : '/system/session/check' };
+    var callback = function(user, data) {
+      var fullUser = null;
+      if(data  && data.user_id) { 
+        fullUser = data;
+        fullUser.accessToken = user.accessToken;
+      } 
+      done(null, fullUser);
+    };
+    handleRequest(fakeUser,options,callback);  
+  }
+));
+
+// setup express server
+var app = express();
 app.configure(function() {
   app.use(express.cookieParser());
   app.use(express.bodyParser());
-  app.use(express.session({ secret: 'akdjfh34gliub97gel' }));
+  // session initialization
+  app.use(express.session({ secret: appConfig.sessionSecret }));
+  // passpport initialization
   app.use(passport.initialize());
   app.use(passport.session());
+  // set location for css, javasript, images
   app.use(express.static(__dirname + '/public'));
+  // setup jade
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
 });
 
+///////////////////////////////////////////
+// SESSION HANDLING REQUEST HANDLERS 
+///////////////////////////////////////////
+
+// entry point for slc auth
 app.get('/auth/slc', passport.authenticate('slc'));
 
+// callback for slc auth
 app.get('/auth/slc/callback', 
   passport.authenticate('slc', { successRedirect: '/',
                                  failureRedirect: '/login' }));
 
+// login setup
 app.get('/login', function(req, res){
   res.render('login.jade',{ 'title' : 'My App - Login' });
 });
 
+
+// logout handler
 app.get('/logout', requireToken(), function(req, res) {
   handleRequest(findUser(req),
                 { 'method' : 'GET', 'uri' : '/system/session/logout' },
@@ -114,6 +145,10 @@ app.get('/logout', requireToken(), function(req, res) {
                   res.redirect('/login');
 		});
 });
+
+///////////////////////////////////////////
+// APP SPECIFIC REQUEST HANDLERS 
+///////////////////////////////////////////
 
 app.get('/', requireToken(), function(req, res) {
   res.redirect('/dashboard'); 
@@ -139,5 +174,10 @@ app.get('/students', requireToken(), function(req, res) {
 		});
 });
 
-app.listen(3000);
-console.log('Listening on port 3000');
+
+///////////////////////////////////////////
+// APP STARTUP
+///////////////////////////////////////////
+
+app.listen(appConfig.port);
+console.log('Listening on port ' + appConfig.port);
