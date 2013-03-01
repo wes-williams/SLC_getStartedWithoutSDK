@@ -15,12 +15,19 @@ var appConfig = require('./appConfig');
 
 // simplified request handling
 function handleRequest(user, options, callback) {
+  var headers =  { 'Authorization': 'Bearer ' + user.accessToken, 
+                   'Content-Type': 'application/json'};
+  var method = options.method.toUpperCase(); 
+  if(method=='PUT' || method=='POST') {
+    options.body = JSON.stringify(options.body);
+    headers['Content-Length'] = options.body.length; // Setting up content length in the request header
+  }
+
   request({ 
         'uri' : appConfig.requestUrl + options.uri,
         'body' : options.body,
         'method' : options.method,
-        'headers' :  { 'Authorization': 'Bearer ' + user.accessToken, 
-	               'Content-Type': 'application/json'}
+        'headers' : headers 
   }, 
   function(error, response, body) {
     if(error) {
