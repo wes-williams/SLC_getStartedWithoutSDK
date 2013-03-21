@@ -3,7 +3,9 @@
 ///////////////////////////////////////////
 
 var express = require('express');
-var passport = require('passport')
+var https = require('https');
+var fs = require('fs');
+var passport = require('passport');
 var OAuth2Strategy = require('passport-oauth').OAuth2Strategy;
 var request = require('request');
 // local module
@@ -187,4 +189,12 @@ app.get('/students', requireToken(), function(req, res) {
 ///////////////////////////////////////////
 
 app.listen(appConfig.port);
-console.log('Listening on port ' + appConfig.port);
+console.log('HTTP listening on port ' + appConfig.port);
+
+if(appConfig.portSSL>0) {
+  var privateKey = fs.readFileSync('ssl/privateKey.pem');
+  var certificate = fs.readFileSync('ssl/certificate.pem');
+  var sslOptions = { key : privateKey, cert : certificate };
+  https.createServer(sslOptions,app).listen(appConfig.portSSL);
+  console.log('HTTPS listening on port ' + appConfig.portSSL);
+}

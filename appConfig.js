@@ -1,5 +1,6 @@
 var appConfig = {
   'port' : 3000,
+  'portSSL' : 0, //3443,
   'sessionSecret' : '**PutSecretSessionDataHere**',
   'requestUrl' : 'https://api.sandbox.inbloom.org/api/rest/v1',
   'oauth' : {
