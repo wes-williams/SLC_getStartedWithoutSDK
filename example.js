@@ -188,8 +188,10 @@ app.get('/students', requireToken(), function(req, res) {
 // APP STARTUP
 ///////////////////////////////////////////
 
-app.listen(appConfig.port);
-console.log('HTTP listening on port ' + appConfig.port);
+if(appConfig.port>0) {
+  app.listen(appConfig.port);
+  console.log('HTTP listening on port ' + appConfig.port);
+}
 
 if(appConfig.portSSL>0) {
   var privateKey = fs.readFileSync('ssl/privateKey.pem');

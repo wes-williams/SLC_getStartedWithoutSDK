@@ -20,3 +20,5 @@ SSL Setup (Recommended)
   * openssl req -new -key privatekey.pem -out certrequest.csr
   * openssl x509 -req -in certrequest.csr -signkey privatekey.pem -out certificate.pem
   * change portSSL in appConfig.js to non-zero value
+  * change callback url to use https and the new port
+  * set port in appConfig.js to zero to disable non-ssl port (Optional)
